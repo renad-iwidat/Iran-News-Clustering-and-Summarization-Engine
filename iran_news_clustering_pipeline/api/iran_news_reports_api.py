@@ -187,6 +187,41 @@ async def get_all_reports_endpoint(
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
+@app.get("/api/reports/latest", response_model=LatestReportsResponseModel, tags=["Reports"])
+async def get_latest_reports_endpoint(
+    limit: int = Query(10, ge=1, le=50, description="Number of latest reports (max 50)")
+):
+    """
+    Get the latest reports.
+    
+    Parameters:
+    - limit: Number of reports to return (default: 10, max: 50)
+    
+    Returns:
+    - List of latest reports
+    """
+    try:
+        # Use page 1 with the specified limit
+        total_count, reports_data = reports_repository.get_all_reports_with_pagination(1, limit)
+        
+        formatted_reports = []
+        for report in reports_data:
+            # report structure: (id, title, content, content_type, cluster_topic, cluster_id, created_at)
+            cluster_id = report[5]  # cluster_id is at index 5
+            sources = reports_repository.get_sources_for_cluster(cluster_id) if cluster_id else []
+            formatted_report = format_report_data_for_response(report, sources)
+            formatted_reports.append(formatted_report)
+        
+        return {
+            "success": True,
+            "count": len(formatted_reports),
+            "reports": formatted_reports
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
 @app.get("/api/reports/{report_id}", response_model=SingleReportResponseModel, tags=["Reports"])
 async def get_report_by_id_endpoint(report_id: int):
     """
@@ -218,36 +253,6 @@ async def get_report_by_id_endpoint(report_id: int):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
-
-@app.get("/api/reports/latest", response_model=LatestReportsResponseModel, tags=["Reports"])
-async def get_latest_reports_endpoint(
-    limit: int = Query(10, ge=1, le=50, description="Number of latest reports (max 50)")
-):
-    """
-    Get the latest reports.
-    
-    Parameters:
-    - limit: Number of reports to return (default: 10, max: 50)
-    
-    Returns:
-    - List of latest reports
-    """
-    try:
-        # Use page 1 with the specified limit
-        total_count, reports_data = reports_repository.get_all_reports_with_pagination(1, limit)
-        
-        formatted_reports = []
-        for report in reports_data:
-            # report structure: (id, title, content, content_type, cluster_topic, cluster_id, created_at)
-            cluster_id = report[5]  # cluster_id is at index 5
-            sources = reports_repository.get_sources_for_cluster(cluster_id) if cluster_id else []
-            formatted_report = format_report_data_for_response(report, sources)
-            formatted_reports.append(formatted_report)
-        
-        return {
-            "success": True,
-            "count": len(formatted_reports),
             "reports": formatted_reports
         }
         
