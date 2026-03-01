@@ -113,18 +113,23 @@ class ReportsAPIRepository:
                 cursor.close()
                 return None
             
-            # Get sources for this cluster
+            # Get sources (original news URLs) for this cluster
             cluster_id = report[5]
             cursor.execute("""
-                SELECT DISTINCT s.url, s.url
+                SELECT DISTINCT rd.url
                 FROM cluster_members cm
                 JOIN raw_data rd ON cm.raw_id = rd.id
-                JOIN sources s ON rd.source_id = s.id
                 WHERE cm.cluster_id = %s
-                ORDER BY s.url;
+                ORDER BY rd.url;
             """, (cluster_id,))
             
-            sources = cursor.fetchall()
+            results = cursor.fetchall()
+            
+            # Extract source names from URLs
+            sources = []
+            for (url,) in results:
+                source_name = self._extract_source_name_from_url(url)
+                sources.append((source_name, url))
             cursor.close()
             
             return {
@@ -141,13 +146,13 @@ class ReportsAPIRepository:
     
     def get_sources_for_cluster(self, cluster_id: int):
         """
-        Gets all sources for a specific cluster.
+        Gets all sources (original news URLs) for a specific cluster.
         
         Args:
             cluster_id: ID of the cluster
             
         Returns:
-            list: List of tuples (source_name, source_url)
+            list: List of tuples (source_name, source_url) where source_name is extracted from URL
         """
         connection = None
         try:
@@ -155,16 +160,21 @@ class ReportsAPIRepository:
             cursor = connection.cursor()
             
             cursor.execute("""
-                SELECT DISTINCT s.url, s.url
+                SELECT DISTINCT rd.url
                 FROM cluster_members cm
                 JOIN raw_data rd ON cm.raw_id = rd.id
-                JOIN sources s ON rd.source_id = s.id
                 WHERE cm.cluster_id = %s
-                ORDER BY s.url;
+                ORDER BY rd.url;
             """, (cluster_id,))
             
-            sources = cursor.fetchall()
+            results = cursor.fetchall()
             cursor.close()
+            
+            # Extract source name from URL
+            sources = []
+            for (url,) in results:
+                source_name = self._extract_source_name_from_url(url)
+                sources.append((source_name, url))
             
             return sources
             
@@ -174,6 +184,98 @@ class ReportsAPIRepository:
         finally:
             if connection:
                 connection.close()
+    
+    def _extract_source_name_from_url(self, url: str) -> str:
+        """
+        Extracts a readable source name from URL.
+        
+        Args:
+            url: Source URL
+            
+        Returns:
+            str: Source name (e.g., "Ynet", "Maariv", "Walla")
+        """
+        if not url:
+            return "Unknown"
+        
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            domain = parsed.netloc
+            
+            # Remove www. prefix
+            if domain.startswith('www.'):
+                domain = domain[4:]
+            
+            # Extract main name and capitalize
+            parts = domain.split('.')
+            if len(parts) >= 2:
+                name = parts[0].capitalize()
+                
+                # Special handling for known sources
+                name_mapping = {
+                    'Ynet': 'Ynet',
+                    'Maariv': 'Maariv',
+                    'Walla': 'Walla',
+                    'Aljazeera': 'Al Jazeera',
+                    'Alarabiya': 'Al Arabiya',
+                    'Almayadeen': 'Al Mayadeen',
+                    'Channel12': 'Channel 12',
+                    'T': 'Telegram'  # for t.me
+                }
+                
+                return name_mapping.get(name, name)
+            
+            return domain
+            
+        except Exception:
+            return "Unknown"
+    
+    def _extract_source_name_from_url(self, url: str) -> str:
+        """
+        Extracts a readable source name from URL.
+        
+        Args:
+            url: Source URL
+            
+        Returns:
+            str: Source name (e.g., "Ynet", "Maariv", "Walla")
+        """
+        if not url:
+            return "Unknown"
+        
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            domain = parsed.netloc
+            
+            # Remove www. prefix
+            if domain.startswith('www.'):
+                domain = domain[4:]
+            
+            # Extract main name and capitalize
+            parts = domain.split('.')
+            if len(parts) >= 2:
+                name = parts[0].capitalize()
+                
+                # Special handling for known sources
+                name_mapping = {
+                    'Ynet': 'Ynet',
+                    'Maariv': 'Maariv',
+                    'Walla': 'Walla',
+                    'Aljazeera': 'Al Jazeera',
+                    'Alarabiya': 'Al Arabiya',
+                    'Almayadeen': 'Al Mayadeen',
+                    'Channel12': 'Channel 12',
+                    'T': 'Telegram'  # for t.me
+                }
+                
+                return name_mapping.get(name, name)
+            
+            return domain
+            
+        except Exception:
+            return "Unknown"
     
     def count_words_in_content(self, content: str) -> int:
         """

@@ -26,7 +26,7 @@ def main():
         logger.info("Starting pipeline execution (Cron Job)")
         
         pipeline = MainPipelineService()
-        stats = pipeline.run_full_pipeline(batch_size=10)
+        stats = pipeline.run_full_pipeline(batch_size=15)
         
         logger.info(f"Pipeline completed successfully: {stats}")
         

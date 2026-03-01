@@ -99,7 +99,7 @@ def main():
     Main entry point for the scheduler.
     """
     # You can customize these values
-    BATCH_SIZE = 10  # Process last 10 unprocessed news
+    BATCH_SIZE = 15  # Process last 15 unprocessed news
     INTERVAL_MINUTES = 15  # Run every 15 minutes
     
     scheduler = PipelineScheduler(

@@ -122,7 +122,7 @@ class NewsClusteringRepository:
                 WHERE rd.is_processed = false
                 AND t.translation_status IN ('completed', 'not_required')
                 AND t.translated_content IS NOT NULL
-                ORDER BY rd.published_at DESC
+                ORDER BY rd.published_at ASC
                 LIMIT %s;
             """, (limit,))
             
