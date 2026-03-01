@@ -146,7 +146,7 @@ class NewsReportRepository:
     
     def get_news_details_for_cluster(self, news_ids: list):
         """
-        Gets news details for a cluster.
+        Gets news details for a cluster from translations table.
         
         Args:
             news_ids: List of news IDs
@@ -161,8 +161,9 @@ class NewsReportRepository:
             
             placeholders = ','.join(['%s'] * len(news_ids))
             cursor.execute(f"""
-                SELECT rd.id, rd.arabic_content, s.url
+                SELECT rd.id, t.translated_content, s.url
                 FROM raw_data rd
+                JOIN translations t ON rd.id = t.raw_data_id AND t.target_language = 'ar'
                 JOIN sources s ON rd.source_id = s.id
                 WHERE rd.id IN ({placeholders});
             """, news_ids)

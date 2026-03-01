@@ -101,6 +101,7 @@ class NewsClusteringRepository:
     def get_news_for_clustering(self, limit: int = 20):
         """
         Fetches translated news articles that are ready for clustering.
+        Reads from the new translations table.
         
         Args:
             limit: Maximum number of articles to fetch
@@ -114,12 +115,13 @@ class NewsClusteringRepository:
             cursor = connection.cursor()
             
             cursor.execute("""
-                SELECT rd.id, rd.arabic_content, s.url
+                SELECT rd.id, t.translated_content, s.url
                 FROM raw_data rd
+                JOIN translations t ON rd.id = t.raw_data_id AND t.target_language = 'ar'
                 JOIN sources s ON rd.source_id = s.id
                 WHERE rd.is_processed = false
-                AND rd.translation_status IN ('completed', 'not_required')
-                AND rd.arabic_content IS NOT NULL
+                AND t.translation_status IN ('completed', 'not_required')
+                AND t.translated_content IS NOT NULL
                 ORDER BY rd.published_at DESC
                 LIMIT %s;
             """, (limit,))

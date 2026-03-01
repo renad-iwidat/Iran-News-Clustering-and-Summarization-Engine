@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class NewsTranslationRepository:
     """
     Handles database operations for news translation.
-    Updates raw_data table with translation information.
+    Uses the new translations table for storing translation data.
     """
     
     def __init__(self, connection_manager: PostgreSQLConnectionManager):
@@ -28,7 +28,7 @@ class NewsTranslationRepository:
     
     def get_unprocessed_news(self, limit: int = 10):
         """
-        Fetches unprocessed news articles from the database.
+        Fetches unprocessed news articles that need translation.
         
         Args:
             limit: Maximum number of articles to fetch
@@ -42,11 +42,12 @@ class NewsTranslationRepository:
             cursor = connection.cursor()
             
             cursor.execute("""
-                SELECT id, content
-                FROM raw_data
-                WHERE is_processed = false
-                AND (translation_status = 'pending' OR translation_status IS NULL)
-                ORDER BY published_at DESC
+                SELECT rd.id, rd.content
+                FROM raw_data rd
+                LEFT JOIN translations t ON rd.id = t.raw_data_id AND t.target_language = 'ar'
+                WHERE rd.is_processed = false
+                AND (t.translation_status IS NULL OR t.translation_status = 'pending')
+                ORDER BY rd.published_at DESC
                 LIMIT %s;
             """, (limit,))
             
@@ -67,7 +68,7 @@ class NewsTranslationRepository:
                                 arabic_content: str, translation_status: str,
                                 error_message: str = None):
         """
-        Updates translation information for a news article.
+        Saves translation information to the translations table.
         
         Args:
             news_id: ID of the news article
@@ -81,32 +82,44 @@ class NewsTranslationRepository:
             connection = self.connection_manager.get_connection_without_pool()
             cursor = connection.cursor()
             
+            # Insert or update translation record
             cursor.execute("""
-                UPDATE raw_data
-                SET original_language = %s,
-                    arabic_content = %s,
-                    translation_status = %s,
-                    translated_at = %s,
-                    translation_error_message = %s
-                WHERE id = %s;
+                INSERT INTO translations (
+                    raw_data_id,
+                    target_language,
+                    original_language,
+                    translated_content,
+                    translation_status,
+                    translated_at,
+                    translation_error_message
+                )
+                VALUES (%s, 'ar', %s, %s, %s, %s, %s)
+                ON CONFLICT (raw_data_id, target_language) 
+                DO UPDATE SET
+                    original_language = EXCLUDED.original_language,
+                    translated_content = EXCLUDED.translated_content,
+                    translation_status = EXCLUDED.translation_status,
+                    translated_at = EXCLUDED.translated_at,
+                    translation_error_message = EXCLUDED.translation_error_message,
+                    updated_at = CURRENT_TIMESTAMP;
             """, (
+                news_id,
                 original_language,
                 arabic_content,
                 translation_status,
                 datetime.now() if translation_status in ['completed', 'not_required'] else None,
-                error_message,
-                news_id
+                error_message
             ))
             
             connection.commit()
             cursor.close()
             
-            logger.info(f"Updated translation info for news ID {news_id}: {translation_status}")
+            logger.info(f"Saved translation for news ID {news_id}: {translation_status}")
             
         except Exception as e:
             if connection:
                 connection.rollback()
-            logger.error(f"Failed to update translation info for news ID {news_id}: {str(e)}")
+            logger.error(f"Failed to save translation for news ID {news_id}: {str(e)}")
             raise
         finally:
             if connection:
@@ -114,7 +127,7 @@ class NewsTranslationRepository:
     
     def get_translation_statistics(self):
         """
-        Gets statistics about translation status.
+        Gets statistics about translation status from translations table.
         
         Returns:
             dict: Statistics about translations
@@ -131,18 +144,19 @@ class NewsTranslationRepository:
                     SUM(CASE WHEN translation_status = 'completed' THEN 1 ELSE 0 END) as completed,
                     SUM(CASE WHEN translation_status = 'not_required' THEN 1 ELSE 0 END) as not_required,
                     SUM(CASE WHEN translation_status = 'failed' THEN 1 ELSE 0 END) as failed
-                FROM raw_data;
+                FROM translations
+                WHERE target_language = 'ar';
             """)
             
             result = cursor.fetchone()
             cursor.close()
             
             stats = {
-                'total': result[0],
-                'pending': result[1],
-                'completed': result[2],
-                'not_required': result[3],
-                'failed': result[4]
+                'total': result[0] or 0,
+                'pending': result[1] or 0,
+                'completed': result[2] or 0,
+                'not_required': result[3] or 0,
+                'failed': result[4] or 0
             }
             
             logger.info(f"Translation statistics: {stats}")
