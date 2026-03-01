@@ -102,13 +102,13 @@ def format_report_data_for_response(report_tuple, sources_list):
     Formats raw database data into API response format.
     
     Args:
-        report_tuple: Tuple from database (id, title, content, content_type, cluster_topic, created_at)
+        report_tuple: Tuple from database (id, title, content, content_type, cluster_topic, cluster_id, created_at)
         sources_list: List of tuples (source_name, source_url)
         
     Returns:
         dict: Formatted report data
     """
-    report_id, title, content, content_type, cluster_topic, created_at = report_tuple[:6]
+    report_id, title, content, content_type, cluster_topic, cluster_id, created_at = report_tuple[:7]
     
     # Count words in content
     word_count = reports_repository.count_words_in_content(content)
@@ -169,7 +169,8 @@ async def get_all_reports_endpoint(
         
         formatted_reports = []
         for report in reports_data:
-            cluster_id = report[5] if len(report) > 5 else None
+            # report structure: (id, title, content, content_type, cluster_topic, cluster_id, created_at)
+            cluster_id = report[5]  # cluster_id is at index 5
             sources = reports_repository.get_sources_for_cluster(cluster_id) if cluster_id else []
             formatted_report = format_report_data_for_response(report, sources)
             formatted_reports.append(formatted_report)
@@ -238,7 +239,8 @@ async def get_latest_reports_endpoint(
         
         formatted_reports = []
         for report in reports_data:
-            cluster_id = report[5] if len(report) > 5 else None
+            # report structure: (id, title, content, content_type, cluster_topic, cluster_id, created_at)
+            cluster_id = report[5]  # cluster_id is at index 5
             sources = reports_repository.get_sources_for_cluster(cluster_id) if cluster_id else []
             formatted_report = format_report_data_for_response(report, sources)
             formatted_reports.append(formatted_report)

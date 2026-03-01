@@ -55,6 +55,7 @@ class ReportsAPIRepository:
                     oc.content,
                     ct.name as content_type_name,
                     c.topic as cluster_topic,
+                    oc.cluster_id,
                     oc.created_at
                 FROM output_content oc
                 JOIN content_type ct ON oc.content_type_id = ct.id
