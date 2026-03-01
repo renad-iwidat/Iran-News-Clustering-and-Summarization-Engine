@@ -152,7 +152,7 @@ class NewsReportRepository:
             news_ids: List of news IDs
             
         Returns:
-            list: List of tuples (news_id, arabic_content, source_url)
+            list: List of tuples (news_id, arabic_content, news_article_url)
         """
         connection = None
         try:
@@ -161,10 +161,9 @@ class NewsReportRepository:
             
             placeholders = ','.join(['%s'] * len(news_ids))
             cursor.execute(f"""
-                SELECT rd.id, t.translated_content, s.url
+                SELECT rd.id, t.translated_content, rd.url
                 FROM raw_data rd
                 JOIN translations t ON rd.id = t.raw_data_id AND t.target_language = 'ar'
-                JOIN sources s ON rd.source_id = s.id
                 WHERE rd.id IN ({placeholders});
             """, news_ids)
             
