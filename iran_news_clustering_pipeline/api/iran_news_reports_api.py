@@ -253,11 +253,6 @@ async def get_report_by_id_endpoint(report_id: int):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-            "reports": formatted_reports
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @app.get("/health", tags=["Health"])
