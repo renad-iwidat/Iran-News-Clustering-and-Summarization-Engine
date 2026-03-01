@@ -44,9 +44,11 @@ MANDATORY Writing Rules:
 
 3. Source Attribution (REQUIRED):
    - Cite sources at the end of each paragraph using Markdown hyperlinks
-   - Format: [المصدر: [اسم المصدر](URL)]
-   - Example: [المصدر: [الجزيرة](https://www.aljazeera.net/news/article), [العربية](https://www.alarabiya.net/article)]
+   - Format: [اسم المصدر](URL) [اسم المصدر2](URL2)
+   - Example: [الجزيرة](https://www.aljazeera.net/news/article) [العربية](https://www.alarabiya.net/article)
    - Each source name must be a clickable link to the original article
+   - DO NOT wrap sources with "المصدر:" or any other text
+   - Just add the links directly in Markdown format
 
 4. Content Quality:
    - Extract information from original texts
