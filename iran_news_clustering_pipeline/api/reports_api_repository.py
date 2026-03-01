@@ -115,12 +115,12 @@ class ReportsAPIRepository:
             # Get sources for this cluster
             cluster_id = report[5]
             cursor.execute("""
-                SELECT DISTINCT s.name, s.url
+                SELECT DISTINCT s.url, s.url
                 FROM cluster_members cm
                 JOIN raw_data rd ON cm.raw_id = rd.id
                 JOIN sources s ON rd.source_id = s.id
                 WHERE cm.cluster_id = %s
-                ORDER BY s.name;
+                ORDER BY s.url;
             """, (cluster_id,))
             
             sources = cursor.fetchall()
@@ -154,12 +154,12 @@ class ReportsAPIRepository:
             cursor = connection.cursor()
             
             cursor.execute("""
-                SELECT DISTINCT s.name, s.url
+                SELECT DISTINCT s.url, s.url
                 FROM cluster_members cm
                 JOIN raw_data rd ON cm.raw_id = rd.id
                 JOIN sources s ON rd.source_id = s.id
                 WHERE cm.cluster_id = %s
-                ORDER BY s.name;
+                ORDER BY s.url;
             """, (cluster_id,))
             
             sources = cursor.fetchall()
