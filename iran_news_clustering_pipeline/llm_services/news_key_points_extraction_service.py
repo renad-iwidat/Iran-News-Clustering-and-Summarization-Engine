@@ -23,6 +23,7 @@ class NewsKeyPointsExtractionService:
 Your Role:
 - Extract key points from news articles
 - Focus on accurate information, context, and implications
+- Classify each point as current event or historical context
 
 Target Audience:
 - Specialized, professional, expert audience
@@ -38,27 +39,52 @@ Task:
 - Each point should be one clear, concise sentence
 - Focus on facts, not opinions
 - Maintain complete neutrality
+- Classify each point as either:
+  * "current" - About ongoing/current events (happening now or very recently)
+  * "historical" - About past events mentioned as context or background
 
 MANDATORY Terminology Rules:
 - Use "الجيش الإسرائيلي" (Israeli Army) consistently
 - Use "مسلح" (armed person) instead of biased terms
 - Maintain professional, neutral language
 
+Classification Guidelines:
+- "current": Events happening now, today, this week, ongoing operations, current situations
+- "historical": Past events, completed operations, events from previous months/years mentioned as context
+- When in doubt, if the event is completed/finished, mark as "historical"
+- If the article discusses a past event that has NEW developments, the NEW part is "current"
+
 Output Format:
 - Provide key points in Arabic only
-- Return as JSON array
+- Return as JSON array with temporal classification
 - Be concise and factual
 
 Example Output:
 {
   "key_points": [
-    "فرضت الولايات المتحدة عقوبات جديدة على إيران",
-    "العقوبات تستهدف قطاع النفط الإيراني",
-    "الهدف الحد من قدرة طهران على تمويل برنامجها النووي"
+    {
+      "text": "الجيش الإسرائيلي يشن عملية عسكرية واسعة ضد إيران حالياً",
+      "temporal_type": "current"
+    },
+    {
+      "text": "العملية تأتي بعد حرب استمرت 12 يوماً في يونيو 2025",
+      "temporal_type": "historical"
+    },
+    {
+      "text": "تم اغتيال صلاح العاروري في يناير 2024 في بيروت",
+      "temporal_type": "historical"
+    },
+    {
+      "text": "الولايات المتحدة تشارك في العملية الحالية بقوات جوية",
+      "temporal_type": "current"
+    }
   ]
 }
 
-CRITICAL: Maintain complete neutrality and objectivity."""
+CRITICAL: 
+- Maintain complete neutrality and objectivity
+- Accurate temporal classification is essential for proper news clustering
+- Today's date context: March 2026"""
     
     def __init__(self, client_manager: OpenAIClientManager):
         """
@@ -71,16 +97,17 @@ CRITICAL: Maintain complete neutrality and objectivity."""
         self.client = client_manager.get_clustering_client()
         self.model = client_manager.config.clustering_model
     
-    def extract_key_points(self, news_content: str, news_id: int = None) -> list:
+    def extract_key_points(self, news_content: str, news_id: int = None) -> dict:
         """
-        Extracts key points from a news article.
+        Extracts key points from a news article with temporal classification.
         
         Args:
             news_content: The Arabic news content
             news_id: Optional news ID for logging
             
         Returns:
-            list: List of key points (strings)
+            dict: Dictionary with 'all_points' (list of dicts with text and temporal_type)
+                  and 'current_points' (list of strings - only current events)
             
         Raises:
             Exception: If extraction fails
@@ -107,9 +134,35 @@ CRITICAL: Maintain complete neutrality and objectivity."""
             key_points_data = json.loads(result)
             key_points = key_points_data.get("key_points", [])
             
-            logger.info(f"{log_prefix}Extracted {len(key_points)} key points")
+            # Separate current and historical points
+            all_points = []
+            current_points = []
+            historical_count = 0
             
-            return key_points
+            for point in key_points:
+                # Handle both old format (string) and new format (dict)
+                if isinstance(point, str):
+                    # Backward compatibility: treat as current if no classification
+                    all_points.append({"text": point, "temporal_type": "current"})
+                    current_points.append(point)
+                elif isinstance(point, dict):
+                    text = point.get("text", "")
+                    temporal_type = point.get("temporal_type", "current")
+                    
+                    all_points.append({"text": text, "temporal_type": temporal_type})
+                    
+                    if temporal_type == "current":
+                        current_points.append(text)
+                    else:
+                        historical_count += 1
+            
+            logger.info(f"{log_prefix}Extracted {len(key_points)} key points "
+                       f"({len(current_points)} current, {historical_count} historical)")
+            
+            return {
+                "all_points": all_points,
+                "current_points": current_points
+            }
             
         except json.JSONDecodeError as e:
             logger.error(f"{log_prefix}Failed to parse JSON response: {str(e)}")
@@ -126,22 +179,28 @@ CRITICAL: Maintain complete neutrality and objectivity."""
             news_articles: List of tuples (news_id, content, source_name)
             
         Returns:
-            dict: Dictionary mapping news_id to key points
+            dict: Dictionary mapping news_id to key points data
+                  Each entry contains:
+                  - all_points: List of dicts with 'text' and 'temporal_type'
+                  - current_points: List of strings (only current events)
+                  - source: Source name
         """
         results = {}
         
         for news_id, content, source_name in news_articles:
             try:
                 logger.info(f"Processing news ID {news_id} from {source_name}")
-                key_points = self.extract_key_points(content, news_id)
+                key_points_data = self.extract_key_points(content, news_id)
                 results[news_id] = {
-                    "key_points": key_points,
+                    "all_points": key_points_data["all_points"],
+                    "current_points": key_points_data["current_points"],
                     "source": source_name
                 }
             except Exception as e:
                 logger.error(f"Failed to extract key points for news ID {news_id}: {str(e)}")
                 results[news_id] = {
-                    "key_points": [],
+                    "all_points": [],
+                    "current_points": [],
                     "source": source_name,
                     "error": str(e)
                 }

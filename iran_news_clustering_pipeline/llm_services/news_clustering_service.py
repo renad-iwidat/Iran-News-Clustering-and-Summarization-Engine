@@ -70,9 +70,10 @@ CRITICAL: Base clustering purely on content similarity, maintain complete neutra
     def cluster_news_by_key_points(self, news_with_key_points: dict) -> list:
         """
         Clusters news articles based on their key points.
+        Uses only CURRENT events for clustering, ignoring historical context.
         
         Args:
-            news_with_key_points: Dict mapping news_id to {key_points, source}
+            news_with_key_points: Dict mapping news_id to {all_points, current_points, source}
             
         Returns:
             list: List of clusters, each with topic and news_ids
@@ -86,19 +87,26 @@ CRITICAL: Base clustering purely on content similarity, maintain complete neutra
         try:
             logger.info(f"Clustering {len(news_with_key_points)} news articles...")
             
-            # Prepare input for LLM
+            # Prepare input for LLM using ONLY current points
             news_summary = []
             for news_id, data in news_with_key_points.items():
-                key_points = data.get("key_points", [])
+                # Use current_points for clustering (backward compatible with old format)
+                current_points = data.get("current_points", data.get("key_points", []))
                 source = data.get("source", "Unknown")
                 
-                if key_points:
-                    points_text = "\n".join([f"  - {point}" for point in key_points])
+                if current_points:
+                    points_text = "\n".join([f"  - {point}" for point in current_points])
                     news_summary.append(f"News ID {news_id} (Source: {source}):\n{points_text}")
+                else:
+                    logger.warning(f"News ID {news_id} has no current events, skipping from clustering")
+            
+            if not news_summary:
+                logger.warning("No news articles with current events found for clustering")
+                return []
             
             input_text = "\n\n".join(news_summary)
             
-            logger.debug(f"Input for clustering:\n{input_text[:500]}...")
+            logger.debug(f"Input for clustering (current events only):\n{input_text[:500]}...")
             
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -115,7 +123,7 @@ CRITICAL: Base clustering purely on content similarity, maintain complete neutra
             clustering_data = json.loads(result)
             clusters = clustering_data.get("clusters", [])
             
-            logger.info(f"Created {len(clusters)} clusters")
+            logger.info(f"Created {len(clusters)} clusters based on current events")
             
             for i, cluster in enumerate(clusters, 1):
                 topic = cluster.get("topic", "Unknown")

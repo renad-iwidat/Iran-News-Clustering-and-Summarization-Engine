@@ -78,14 +78,25 @@ class NewsReportGenerationPipelineService:
                 
                 for news_id, arabic_content, source_url in news_details:
                     try:
-                        key_points = self.key_points_extractor.extract_key_points(arabic_content, news_id)
+                        key_points_data = self.key_points_extractor.extract_key_points(arabic_content, news_id)
                         
                         # Extract source name from URL
                         source_name = self._extract_source_name_from_url(source_url)
                         
+                        # Use ALL points (current + historical) for report generation
+                        # This preserves historical context in the final report
+                        all_points_text = []
+                        if isinstance(key_points_data, dict):
+                            # New format with temporal classification
+                            for point in key_points_data.get("all_points", []):
+                                all_points_text.append(point.get("text", ""))
+                        else:
+                            # Old format (backward compatibility)
+                            all_points_text = key_points_data if isinstance(key_points_data, list) else []
+                        
                         news_articles_data.append({
                             "news_id": news_id,
-                            "key_points": key_points,
+                            "key_points": all_points_text,  # Use all points for report
                             "source": source_name,
                             "source_url": source_url
                         })

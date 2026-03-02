@@ -154,7 +154,7 @@ class NewsClusteringPipelineService:
         
         Args:
             standalone_news_ids: List of news IDs that are not in any cluster
-            news_with_key_points: Dictionary mapping news_id to key points
+            news_with_key_points: Dictionary mapping news_id to key points data
             
         Returns:
             int: Number of standalone clusters created
@@ -165,17 +165,19 @@ class NewsClusteringPipelineService:
             try:
                 # Get key points for this news
                 news_data = news_with_key_points.get(news_id, {})
-                key_points = news_data.get("key_points", [])
                 
-                if not key_points:
-                    logger.warning(f"No key points found for standalone news {news_id}, skipping")
+                # Try to get current_points first (new format), fallback to key_points (old format)
+                current_points = news_data.get("current_points", news_data.get("key_points", []))
+                
+                if not current_points:
+                    logger.warning(f"No current event points found for standalone news {news_id}, skipping")
                     continue
                 
                 # Use first key point as topic (or combine first 2)
-                if len(key_points) >= 2:
-                    topic = f"{key_points[0][:50]}... {key_points[1][:30]}..."
+                if len(current_points) >= 2:
+                    topic = f"{current_points[0][:50]}... {current_points[1][:30]}..."
                 else:
-                    topic = key_points[0][:80] + "..." if len(key_points[0]) > 80 else key_points[0]
+                    topic = current_points[0][:80] + "..." if len(current_points[0]) > 80 else current_points[0]
                 
                 # Get source_id
                 source_id = self._get_source_id_for_news(news_id)

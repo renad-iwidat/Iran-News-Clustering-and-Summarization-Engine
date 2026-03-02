@@ -64,12 +64,21 @@ Title Requirements:
 - Be specific and informative
 - Example: "واشنطن تشدد العقوبات على صناعة النفط الإيرانية"
 
-Report Structure:
-- Clear introduction
-- Organized body paragraphs
-- Logical flow of information
+Report Structure (CRITICAL):
+- Start with CURRENT events and developments (what's happening NOW)
+- Integrate historical context naturally within the narrative (not as separate section)
+- Use historical events to provide background and understanding
+- Maintain focus on current developments while enriching with context
+- Logical flow: Present → Context → Present → Analysis
 - Source citations after each paragraph
 - Professional conclusion if needed
+
+Historical Context Integration:
+- Weave historical events naturally into the narrative
+- Use phrases like: "تأتي هذه التطورات بعد..." or "في سياق..." or "منذ..."
+- Historical context should SUPPORT the current story, not overshadow it
+- Keep historical references concise but informative
+- Example: "بدأت العملية الحالية... [current]. تأتي بعد سلسلة عمليات بدأت في يناير 2024... [context]. اليوم، تواصل القوات... [back to current]"
 
 Content Type Classification:
 After writing, classify the report as ONE of:
