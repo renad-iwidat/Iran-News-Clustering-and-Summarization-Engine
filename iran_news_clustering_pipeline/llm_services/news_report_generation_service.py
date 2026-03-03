@@ -42,13 +42,16 @@ MANDATORY Writing Rules:
    - Never use "جيش الدفاع" or "جيش الاحتلال"
    - Use "مسلح" (armed person) instead of "إرهابي" or "مخرب"
 
-3. Source Attribution (REQUIRED):
-   - Cite sources at the end of each paragraph using Markdown hyperlinks
+3. Source Attribution (CONDITIONAL):
+   - ONLY cite sources if real source URLs are provided in the input
+   - If the input says "DO NOT add any source citations", write the report WITHOUT any source links
+   - When sources are available: cite them at the end of each paragraph using Markdown hyperlinks
    - Format: [اسم المصدر](URL) [اسم المصدر2](URL2)
    - Example: [الجزيرة](https://www.aljazeera.net/news/article) [العربية](https://www.alarabiya.net/article)
    - Each source name must be a clickable link to the original article
    - DO NOT wrap sources with "المصدر:" or any other text
-   - Just add the links directly in Markdown format
+   - DO NOT invent or fabricate source URLs
+   - Just add the links directly in Markdown format when available
 
 4. Content Quality:
    - Extract information from original texts
@@ -139,16 +142,30 @@ CRITICAL REQUIREMENTS:
             
             # Prepare input for LLM
             articles_summary = []
+            has_real_sources = False
+            
             for article in news_articles:
                 source = article.get("source", "Unknown")
                 source_url = article.get("source_url", "")
                 key_points = article.get("key_points", [])
                 
+                # Check if this is a real source (not manual text)
+                if source_url and not source_url.startswith("manual_text"):
+                    has_real_sources = True
+                
                 if key_points:
                     points_text = "\n".join([f"  - {point}" for point in key_points])
-                    articles_summary.append(f"من [{source}]({source_url}):\n{points_text}")
+                    if has_real_sources:
+                        articles_summary.append(f"من [{source}]({source_url}):\n{points_text}")
+                    else:
+                        articles_summary.append(f"من مصدر يدوي:\n{points_text}")
             
-            input_text = f"الموضوع: {cluster_topic}\n\nالنقاط الرئيسية من المصادر:\n\n" + "\n\n".join(articles_summary)
+            # Add instruction about sources
+            source_instruction = ""
+            if not has_real_sources:
+                source_instruction = "\n\nIMPORTANT: These are manually entered texts without real source URLs. DO NOT add any source citations in the report. Write the report without any source links."
+            
+            input_text = f"الموضوع: {cluster_topic}\n\nالنقاط الرئيسية من المصادر:\n\n" + "\n\n".join(articles_summary) + source_instruction
             
             logger.debug(f"Input for report generation:\n{input_text[:500]}...")
             

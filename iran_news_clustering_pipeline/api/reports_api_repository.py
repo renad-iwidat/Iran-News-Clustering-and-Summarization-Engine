@@ -116,9 +116,10 @@ class ReportsAPIRepository:
             # Get sources (original news URLs) for this cluster
             cluster_id = report[5]
             cursor.execute("""
-                SELECT DISTINCT rd.url
+                SELECT DISTINCT rd.url, s.url as source_url
                 FROM cluster_members cm
                 JOIN raw_data rd ON cm.raw_id = rd.id
+                JOIN sources s ON rd.source_id = s.id
                 WHERE cm.cluster_id = %s
                 ORDER BY rd.url;
             """, (cluster_id,))
@@ -127,9 +128,13 @@ class ReportsAPIRepository:
             
             # Extract source names from URLs
             sources = []
-            for (url,) in results:
-                source_name = self._extract_source_name_from_url(url)
-                sources.append((source_name, url))
+            for news_url, source_url in results:
+                # Skip manual text sources
+                if source_url == 'text' or news_url.startswith('manual_text'):
+                    sources.append(("Manual Text", "manual"))
+                else:
+                    source_name = self._extract_source_name_from_url(news_url)
+                    sources.append((source_name, news_url))
             cursor.close()
             
             return {
@@ -160,9 +165,10 @@ class ReportsAPIRepository:
             cursor = connection.cursor()
             
             cursor.execute("""
-                SELECT DISTINCT rd.url
+                SELECT DISTINCT rd.url, s.url as source_url
                 FROM cluster_members cm
                 JOIN raw_data rd ON cm.raw_id = rd.id
+                JOIN sources s ON rd.source_id = s.id
                 WHERE cm.cluster_id = %s
                 ORDER BY rd.url;
             """, (cluster_id,))
@@ -172,9 +178,13 @@ class ReportsAPIRepository:
             
             # Extract source name from URL
             sources = []
-            for (url,) in results:
-                source_name = self._extract_source_name_from_url(url)
-                sources.append((source_name, url))
+            for news_url, source_url in results:
+                # Skip manual text sources
+                if source_url == 'text' or news_url.startswith('manual_text'):
+                    sources.append(("Manual Text", "manual"))
+                else:
+                    source_name = self._extract_source_name_from_url(news_url)
+                    sources.append((source_name, news_url))
             
             return sources
             
