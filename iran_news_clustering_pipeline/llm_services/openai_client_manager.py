@@ -43,21 +43,21 @@ class OpenAIClientManager:
             if self.config.translation_api_key:
                 self.translation_client = OpenAI(
                     api_key=self.config.translation_api_key,
-                    timeout=30.0
+                    timeout=120.0
                 )
                 logger.info("Translation client initialized successfully")
             
             if self.config.clustering_api_key:
                 self.clustering_client = OpenAI(
                     api_key=self.config.clustering_api_key,
-                    timeout=30.0
+                    timeout=60.0
                 )
                 logger.info("Clustering client initialized successfully")
             
             if self.config.report_generation_api_key:
                 self.report_generation_client = OpenAI(
                     api_key=self.config.report_generation_api_key,
-                    timeout=30.0
+                    timeout=60.0
                 )
                 logger.info("Report generation client initialized successfully")
                 

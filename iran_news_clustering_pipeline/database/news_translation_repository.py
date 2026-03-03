@@ -47,7 +47,7 @@ class NewsTranslationRepository:
                 LEFT JOIN translations t ON rd.id = t.raw_data_id AND t.target_language = 'ar'
                 WHERE rd.is_processed = false
                 AND (t.translation_status IS NULL OR t.translation_status = 'pending')
-                ORDER BY rd.published_at ASC
+                ORDER BY rd.id DESC
                 LIMIT %s;
             """, (limit,))
             
